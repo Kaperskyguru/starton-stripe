@@ -1,27 +1,25 @@
-const stripe = require("stripe");
-const express = require("express");
+const Stripe = require('stripe');
+const express = require('express');
 const app = express();
-const Starton = require("./Starton");
-const User = require("./User");
+const Starton = require('./Starton');
+const router = express.Router();
 
 // This is your Stripe CLI webhook secret for testing your endpoint locally.
 const endpointSecret =
-  "whsec_041bb62a3bd692a16149897ce041c23480020ab808256fe5c8d811271f7a842a";
+  'whsec_041bb62a3bd692a16149897ce041c23480020ab808256fe5c8d811271f7a842a';
 
-app.post("/buy", (req, res) => {
-  return User.create(req.body);
-});
+const STRIPE_KEY = 'sk_test_QSgoO04vuLQDwz9me69qojpN00HYo0ATPw';
 
-app.post(
-  "/webhooks/stripe",
-  express.raw({ type: "application/json" }),
+router.post(
+  '/',
+  express.raw({ type: 'application/json' }),
   (request, response) => {
-    const sig = request.headers["stripe-signature"];
+    const sig = request.headers['stripe-signature'];
 
     let event;
 
     try {
-      event = stripe.webhooks.constructEvent(request.body, sig, endpointSecret);
+      event = Stripe.webhooks.constructEvent(request.body, sig, endpointSecret);
     } catch (err) {
       response.status(400).send(`Webhook Error: ${err.message}`);
       return;
@@ -29,11 +27,14 @@ app.post(
 
     // Handle the event
     switch (event.type) {
-      case "payment_intent.succeeded":
+      case 'payment_intent.succeeded':
         const paymentIntent = event.data.object;
-
+        console.log(paymentIntent);
         // We call our Starton method to mint and send to the user.
-        Starton.mintAndSend(paymentIntent);
+        if (!Starton.mintAndSend(paymentIntent))
+          return response
+            .status(500)
+            .send(`NFT Mint Error: No user email or wallet found`);
 
         break;
       default:
@@ -45,4 +46,37 @@ app.post(
   }
 );
 
-app.listen(4242, () => console.log("Running on port 4242"));
+app.use('/webhook', router);
+
+app.use(express.static(__dirname + '/'));
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+
+app.get('/', (req, res) => {
+  res.sendFile(__dirname + '/index.html');
+});
+
+app.post('/buy', async (req, res) => {
+  // Create metadata for Stripe Buyer
+  try {
+    const stripe = Stripe(STRIPE_KEY);
+    const customer = await stripe.customers.create({
+      email: req.body.email,
+      metadata: {
+        wallet: req.body.wallet,
+      },
+    });
+
+    if (!customer) {
+      return res
+        .status(500)
+        .send(`Customer Error: Can not create new customer`);
+    }
+    return res.redirect('https://buy.stripe.com/test_28o16Z9NQ8vTfGUaEE');
+  } catch (error) {
+    return res
+      .status(500)
+      .send(`Customer Error: Can not create new customer: Error: ${error}`);
+  }
+});
+app.listen(4242, () => console.log('Running on port 4242'));
