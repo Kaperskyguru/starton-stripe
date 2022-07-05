@@ -28,7 +28,6 @@ router.post(
     switch (event.type) {
       case 'payment_intent.succeeded':
         const paymentIntent = event.data.object;
-        console.log(paymentIntent);
         // We call our Starton method to mint and send to the user.
         if (!Starton.mintAndSend(paymentIntent))
           return response
