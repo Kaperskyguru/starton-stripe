@@ -5,10 +5,9 @@ const Starton = require('./Starton');
 const router = express.Router();
 
 // This is your Stripe CLI webhook secret for testing your endpoint locally.
-const endpointSecret =
-  'whsec_041bb62a3bd692a16149897ce041c23480020ab808256fe5c8d811271f7a842a';
+const endpointSecret = 'YOUR_STRIPE_WEBHOOK_SECRET_KEY';
 
-const STRIPE_KEY = 'sk_test_QSgoO04vuLQDwz9me69qojpN00HYo0ATPw';
+const STRIPE_KEY = 'YOUR_STRIPE_SECRET_API_KEY';
 
 router.post(
   '/',
